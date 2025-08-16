@@ -234,6 +234,7 @@ export default async function Page() {
   const totalWagered = sorted.reduce((acc, r) => acc + parseAmount(r.wagered_amount), 0);
   const top3 = sorted.slice(0, 3);
 
+  
   // limit table to top 10
   const top10 = sorted.slice(0, 10);
 
