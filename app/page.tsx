@@ -188,7 +188,7 @@ function Podium({ top }: { top: Affiliate[] }) {
         </div>
         {prize ? (
           <div className="mt-2 rounded-full border border-rose-700/40 bg-rose-900/30 px-3 py-1 text-sm text-rose-200">
-            Prize: ${prize}
+            Prize: C${prize}
           </div>
         ) : null}
       </div>
@@ -352,7 +352,7 @@ export default async function Page() {
                     <td className="p-3">
                       {prize ? (
                         <span className="inline-block rounded-full border border-rose-700/40 bg-rose-900/30 px-2 py-0.5 text-rose-200 text-xs">
-                          ${prize}
+                          C${prize}
                         </span>
                       ) : (
                         <span className="text-zinc-500">—</span>
