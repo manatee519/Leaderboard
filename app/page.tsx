@@ -234,7 +234,7 @@ export default async function Page() {
   const totalWagered = sorted.reduce((acc, r) => acc + parseAmount(r.wagered_amount), 0);
   const top3 = sorted.slice(0, 3);
 
-  
+
   // limit table to top 10
   const top10 = sorted.slice(0, 10);
 
@@ -299,7 +299,7 @@ export default async function Page() {
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard label="Participants" value={participants.toString()} />
           <StatCard label="Total Wagered" value={formatMoney(totalWagered)} />
-          <StatCard label="Total Prize Pool" value={`$${totalPrizePool}`} />
+          <StatCard label="Total Prize Pool" value={`C$${totalPrizePool}`} />
         </div>
 
         {/* Last Week Winner */}
