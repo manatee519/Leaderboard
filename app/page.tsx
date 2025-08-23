@@ -486,9 +486,9 @@ export default async function Page() {
                 endY={endY}
                 endM={endM}
                 endD={endD}
-                endHourUTC={0}
-                endMinuteUTC={0}
-                endSecondUTC={0}
+                endHourUTC={23}   // was 0
+                endMinuteUTC={59} // was 0
+                endSecondUTC={59} // was 0
               />
             </div>
           </div>
