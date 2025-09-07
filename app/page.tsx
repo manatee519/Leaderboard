@@ -51,10 +51,11 @@ const PACKS = {
     stickyHeaderClass:
       "sticky top-0 z-50 border-b border-zinc-800 bg-black/70 backdrop-blur supports-[backdrop-filter]:bg-black/50",
     medalGlow: {
-      1: "drop-shadow(0 0 30px rgba(251,191,36,0.8))",
-      2: "drop-shadow(0 0 30px rgba(212,212,212,0.8))",
-      3: "drop-shadow(0 0 30px rgba(205,127,50,0.8))",
+      1: "drop-shadow(0 0 30px rgba(244, 63, 94, 0.9))",   // bright rose red (first place)
+      2: "drop-shadow(0 0 30px rgba(251, 113, 133, 0.8))", // softer pink-rose (second place)
+      3: "drop-shadow(0 0 30px rgba(159, 18, 57, 0.8))",   // deep crimson-rose (third place)
     } as Record<1 | 2 | 3, string>,
+
     showInstagram: true,
   },
 } as const;
