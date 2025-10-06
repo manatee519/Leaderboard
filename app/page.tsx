@@ -211,10 +211,10 @@ function getCustomPeriod(now = new Date()): Period {
   let start = atUTC(y, m, d, 0,0,0,0);
   const one = (s: Date) => ({ start: s, end: addDaysUTC(s, len-1) });
   let cur = one(start);
-  while (now.getTime() > atUTC(cur.end.getUTCFullYear(), cur.end.getUTCMonth()+1, cur.end.getUTCDate(), 23,59,59,999).getTime()) {
-    start = addDaysUTC(start, len);
-    cur = one(start);
-  }
+  // while (now.getTime() > atUTC(cur.end.getUTCFullYear(), cur.end.getUTCMonth()+1, cur.end.getUTCDate(), 23,59,59,999).getTime()) {
+  //   start = addDaysUTC(start, len);
+  //   cur = one(start);
+  // }
   const end = atUTC(cur.end.getUTCFullYear(), cur.end.getUTCMonth()+1, cur.end.getUTCDate(), 23,59,59,999);
   return { startDate: ymdUTC(cur.start), endDate: ymdUTC(cur.end), endUtc: end, label: `${ymdUTC(cur.start)} → ${ymdUTC(cur.end)}` };
 }
