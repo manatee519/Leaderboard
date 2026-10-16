@@ -2,107 +2,103 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 type Product = {
   id: string;
   name: string;
   price: number;
-  colors: string[];
+  description: string;
+  colors: { name: string; image: string }[];
   sizes?: string[];
-  emoji: string;
 };
 
 type CartItem = {
-  id: string;
+  key: string;
   name: string;
   color: string;
   size: string;
+  image: string;
   price: number;
   quantity: number;
 };
 
-const products: Product[] = [
+const PRODUCTS: Product[] = [
   {
     id: "hoodie",
-    name: "MANATEE Hoodie",
+    name: "MANATEE519 HOODIE",
     price: 40,
-    colors: ["Black", "Heather Grey"],
+    description: "Signature MANATEE design. Front and sleeve graphics.",
+    colors: [
+      { name: "Black", image: "/hoodie-black.png" },
+      { name: "Heather Grey", image: "/hoodie-grey.png" },
+    ],
     sizes: ["S", "M", "L", "XL", "2XL", "3XL"],
-    emoji: "🧥",
   },
   {
     id: "hat",
-    name: "MANATEE Hat",
+    name: "MANATEE519 HAT",
     price: 30,
-    colors: ["Black", "Grey", "Caramel"],
-    emoji: "🧢",
+    description: "Classic cap with a bold heat-transfer MANATEE logo.",
+    colors: [
+      { name: "Black", image: "/hat-black.png" },
+      { name: "Grey", image: "/hat-grey.png" },
+      { name: "Caramel", image: "/hat-caramel.png" },
+    ],
   },
   {
     id: "fanny",
-    name: "MANATEE Fanny Pack",
+    name: "MANATEE519 FANNY PACK",
     price: 20,
+    description: "Everyday essentials with the MANATEE signature logo.",
     colors: [
-      "Black",
-      "Storm Grey",
-      "Sahara",
-      "Midnight Blue",
-      "Blue Mist",
+      { name: "Black", image: "/fanny-black.png" },
+      { name: "Storm Grey", image: "/fanny-grey.png" },
+      { name: "Sahara", image: "/fanny-sahara.png" },
+      { name: "Midnight Blue", image: "/fanny-navy.png" },
+      { name: "Blue Mist", image: "/fanny-blue.png" },
     ],
-    emoji: "🎒",
   },
 ];
 
-const money = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+const usd = (amount: number) => `$${amount.toFixed(2)}`;
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px 14px",
+  borderRadius: 9,
+  border: "1px solid #343441",
+  background: "#111118",
+  color: "white",
+  fontSize: 14,
+};
 
 export default function MerchPage() {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [selections, setSelections] = useState<
-    Record<string, { color: string; size: string }>
+  const [selectedColors, setSelectedColors] = useState<
+    Record<string, number>
   >({});
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<
+    Record<string, string>
+  >({});
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [country, setCountry] = useState("Canada");
   const [copied, setCopied] = useState(false);
 
-  const selected = (product: Product) =>
-    selections[product.id] || {
-      color: product.colors[0],
-      size: product.sizes?.[0] || "One Size",
-    };
-
-  function updateSelection(
-    id: string,
-    field: "color" | "size",
-    value: string
-  ) {
-    const product = products.find((p) => p.id === id)!;
-    setSelections((previous) => ({
-      ...previous,
-      [id]: {
-        ...(previous[id] || {
-          color: product.colors[0],
-          size: product.sizes?.[0] || "One Size",
-        }),
-        [field]: value,
-      },
-    }));
-  }
-
   function addToCart(product: Product) {
-    const choice = selected(product);
-    const id = `${product.id}-${choice.color}-${choice.size}`;
+    const colorIndex = selectedColors[product.id] ?? 0;
+    const color = product.colors[colorIndex];
+    const size = selectedSizes[product.id] || product.sizes?.[0] || "One Size";
+    const key = `${product.id}-${color.name}-${size}`;
 
     setCart((previous) => {
-      const existing = previous.find((item) => item.id === id);
+      const existing = previous.find((item) => item.key === key);
 
       if (existing) {
         return previous.map((item) =>
-          item.id === id
+          item.key === key
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -111,30 +107,32 @@ export default function MerchPage() {
       return [
         ...previous,
         {
-          id,
+          key,
           name: product.name,
+          color: color.name,
+          size,
+          image: color.image,
           price: product.price,
-          color: choice.color,
-          size: choice.size,
           quantity: 1,
         },
       ];
     });
+
+    setCopied(false);
+    setCartOpen(true);
   }
 
-  function changeQuantity(id: string, difference: number) {
+  function changeQuantity(key: string, difference: number) {
     setCart((previous) =>
       previous
         .map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity: item.quantity + difference,
-              }
+          item.key === key
+            ? { ...item, quantity: item.quantity + difference }
             : item
         )
         .filter((item) => item.quantity > 0)
     );
+    setCopied(false);
   }
 
   const subtotal = cart.reduce(
@@ -142,283 +140,143 @@ export default function MerchPage() {
     0
   );
 
-  const count = cart.reduce(
+  const itemCount = cart.reduce(
     (sum, item) => sum + item.quantity,
     0
   );
 
-  const orderText = [
+  const orderDetails = [
     "MANATEE519 MERCH PRE-ORDER REQUEST",
     "",
-    `Name: ${customerName}`,
-    `Email: ${customerEmail}`,
+    `Name: ${name}`,
+    `Email: ${email}`,
     `Country: ${country}`,
     "",
     ...cart.map(
       (item) =>
-        `${item.quantity}x ${item.name} | ${item.color} | ${item.size} | ${money(item.price * item.quantity)}`
+        `${item.quantity}x ${item.name} | ${item.color} | ${item.size} | ${usd(item.price * item.quantity)} USD`
     ),
     "",
-    `Subtotal: ${money(subtotal)} USD`,
+    `Subtotal: ${usd(subtotal)} USD`,
     country === "Canada"
       ? "Shipping: FREE within Canada"
       : "Shipping: To be quoted",
     "",
-    "This is a pre-order request, not a paid order.",
+    "This is a pre-order request. Payment has not been collected.",
   ].join("\n");
 
   async function copyOrder() {
     try {
-      await navigator.clipboard.writeText(orderText);
+      await navigator.clipboard.writeText(orderDetails);
       setCopied(true);
     } catch {
-      window.alert("Unable to copy. Please try again.");
+      alert("Copy failed. Please try again.");
     }
   }
 
-  const fieldStyle = {
-    background: "#11131b",
-    color: "#fff",
-    border: "1px solid #373947",
-    borderRadius: 9,
-    padding: "12px",
-    width: "100%",
-    fontSize: 14,
-  };
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(ellipse at top, #35101d 0%, #0a0a0e 50%, #050507 100%)",
-        color: "white",
-        fontFamily: "Arial, sans-serif",
-        padding: "30px 18px 90px",
-      }}
-    >
-      <div style={{ maxWidth: 1100, margin: "auto" }}>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 15,
-            marginBottom: 60,
-          }}
-        >
-          <a
-            href="/"
-            style={{
-              color: "#fff",
-              textDecoration: "none",
-              fontWeight: 900,
-              letterSpacing: 2,
-            }}
-          >
-            MANATEE519
+    <main className="merch">
+      <div className="container">
+        <nav className="nav">
+          <a href="/" className="brand">
+            MANATEE<span>519</span>
           </a>
-          <button
-            onClick={() => setCheckoutOpen(true)}
-            style={{
-              background: "#ef1252",
-              color: "white",
-              border: 0,
-              padding: "12px 18px",
-              borderRadius: 9,
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            CART ({count})
-          </button>
-        </header>
-
-        <section
-          style={{
-            textAlign: "center",
-            padding: "30px 0 65px",
-          }}
-        >
-          <div
-            style={{
-              color: "#ff477a",
-              letterSpacing: 4,
-              fontSize: 12,
-              fontWeight: "bold",
-            }}
-          >
-            OFFICIAL COMMUNITY COLLECTION
+          <div className="navActions">
+            <a href="/" className="backLink">LEADERBOARD</a>
+            <button
+              className="cartButton"
+              onClick={() => setCartOpen(true)}
+            >
+              CART ({itemCount})
+            </button>
           </div>
+        </nav>
 
-          <h1
-            style={{
-              fontSize: "clamp(42px, 9vw, 94px)",
-              fontWeight: 1000,
-              letterSpacing: -4,
-              margin: "15px 0",
-              lineHeight: 1,
-            }}
-          >
-            MANATEE
-            <span style={{ color: "#ff1455" }}>519</span>
+        <section className="hero">
+          <p className="eyebrow">OFFICIAL MANATEE519 MERCH</p>
+          <h1>
+            THE FIRST <span>DROP.</span>
           </h1>
-
-          <h2
-            style={{
-              fontSize: "clamp(20px, 4vw, 34px)",
-              letterSpacing: 4,
-              marginBottom: 15,
-            }}
-          >
-            THE FIRST DROP
-          </h2>
-
-          <p style={{ color: "#aaa", lineHeight: 1.8 }}>
-            Exclusive community merch.
+          <p className="heroText">
+            Exclusive MANATEAM collection.
             <br />
-            Made to order. Built for the MANATEAM.
+            Made to order. Built for the community.
           </p>
-
-          <div
-            style={{
-              display: "inline-block",
-              border: "1px solid #ef1252",
-              color: "#ff6a94",
-              padding: "12px 22px",
-              borderRadius: 30,
-              marginTop: 20,
-              fontWeight: "bold",
-            }}
-          >
-            PRE-ORDERS OPEN SOON
-          </div>
+          <div className="preorderTag">PRE-ORDER COLLECTION</div>
+          <p className="shipping">🇨🇦 FREE SHIPPING ACROSS CANADA</p>
         </section>
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(100%, 290px), 1fr))",
-            gap: 22,
-          }}
-        >
-          {products.map((product) => {
-            const choice = selected(product);
+        <div className="sectionTitle">
+          <h2>SHOP THE DROP</h2>
+          <p>All prices in USD</p>
+        </div>
+
+        <section className="products">
+          {PRODUCTS.map((product) => {
+            const colorIndex = selectedColors[product.id] ?? 0;
+            const color = product.colors[colorIndex];
 
             return (
-              <article
-                key={product.id}
-                style={{
-                  background: "#15151b",
-                  border: "1px solid #303039",
-                  borderRadius: 17,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    minHeight: 210,
-                    background:
-                      "linear-gradient(145deg, #30202b, #101014)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 85,
-                    position: "relative",
-                  }}
-                >
-                  {product.emoji}
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 14,
-                      left: 14,
-                      background: "#ed1450",
-                      fontSize: 11,
-                      padding: "7px 10px",
-                      borderRadius: 5,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    FIRST DROP
-                  </span>
+              <article className="productCard" key={product.id}>
+                <div className="productImage">
+                  <div className="dropLabel">FIRST DROP</div>
+                  <Image
+                    key={color.image}
+                    src={color.image}
+                    alt={`${product.name} in ${color.name}`}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 700px) 100vw, 350px"
+                    style={{ objectFit: "contain" }}
+                  />
                 </div>
 
-                <div style={{ padding: 22 }}>
-                  <h3 style={{ fontSize: 22, margin: "0 0 8px" }}>
-                    {product.name}
-                  </h3>
-
-                  <div
-                    style={{
-                      fontSize: 26,
-                      fontWeight: "bold",
-                      color: "#ff477a",
-                      marginBottom: 22,
-                    }}
-                  >
-                    {money(product.price)}
-                    <span
-                      style={{
-                        color: "#999",
-                        fontSize: 12,
-                        marginLeft: 7,
-                      }}
-                    >
-                      USD
-                    </span>
+                <div className="productInfo">
+                  <h3>{product.name}</h3>
+                  <p className="description">{product.description}</p>
+                  <div className="price">
+                    {usd(product.price)} <small>USD</small>
                   </div>
 
-                  <label
-                    style={{
-                      display: "block",
-                      color: "#aaa",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Colour
-                  </label>
-
-                  <select
-                    value={choice.color}
-                    onChange={(e) =>
-                      updateSelection(
-                        product.id,
-                        "color",
-                        e.target.value
-                      )
-                    }
-                    style={{ ...fieldStyle, marginBottom: 18 }}
-                  >
-                    {product.colors.map((color) => (
-                      <option key={color}>{color}</option>
+                  <label>SELECT COLOUR</label>
+                  <div className="colorButtons">
+                    {product.colors.map((option, index) => (
+                      <button
+                        key={option.name}
+                        className={
+                          index === colorIndex
+                            ? "colorChoice active"
+                            : "colorChoice"
+                        }
+                        onClick={() =>
+                          setSelectedColors((previous) => ({
+                            ...previous,
+                            [product.id]: index,
+                          }))
+                        }
+                      >
+                        {option.name}
+                      </button>
                     ))}
-                  </select>
+                  </div>
 
                   {product.sizes && (
                     <>
-                      <label
-                        style={{
-                          display: "block",
-                          color: "#aaa",
-                          marginBottom: 8,
-                        }}
-                      >
-                        Size
-                      </label>
+                      <label>SELECT SIZE</label>
                       <select
-                        value={choice.size}
-                        onChange={(e) =>
-                          updateSelection(
-                            product.id,
-                            "size",
-                            e.target.value
-                          )
+                        style={inputStyle}
+                        value={
+                          selectedSizes[product.id] ||
+                          product.sizes[0]
                         }
-                        style={{
-                          ...fieldStyle,
-                          marginBottom: 18,
-                        }}
+                        onChange={(event) =>
+                          setSelectedSizes((previous) => ({
+                            ...previous,
+                            [product.id]: event.target.value,
+                          }))
+                        }
                       >
                         {product.sizes.map((size) => (
                           <option key={size}>{size}</option>
@@ -428,17 +286,8 @@ export default function MerchPage() {
                   )}
 
                   <button
+                    className="addButton"
                     onClick={() => addToCart(product)}
-                    style={{
-                      width: "100%",
-                      padding: 15,
-                      background: "#ef1252",
-                      color: "white",
-                      border: 0,
-                      borderRadius: 9,
-                      fontWeight: "bold",
-                      cursor: "pointer",
-                    }}
                   >
                     ADD TO CART +
                   </button>
@@ -448,140 +297,76 @@ export default function MerchPage() {
           })}
         </section>
 
-        <section
-          style={{
-            textAlign: "center",
-            padding: "70px 15px",
-            lineHeight: 1.9,
-          }}
-        >
-          <h2>🇨🇦 FREE CANADIAN SHIPPING</h2>
-          <p style={{ color: "#aaa" }}>
-            Free shipping across Canada.
-            <br />
-            International shipping quoted separately.
-            <br />
-            All items are made to order.
-          </p>
-          <p style={{ color: "#ff7a9c", fontSize: 13 }}>
-            Pre-order requests do not reserve inventory or
-            collect payment.
-          </p>
+        <section className="information">
+          <div>
+            <h3>🇨🇦 FREE CANADIAN SHIPPING</h3>
+            <p>Every Canadian order ships free.</p>
+          </div>
+          <div>
+            <h3>🌎 INTERNATIONAL ORDERS</h3>
+            <p>Shipping is quoted separately.</p>
+          </div>
+          <div>
+            <h3>🔥 MADE TO ORDER</h3>
+            <p>Each item is produced after ordering.</p>
+          </div>
         </section>
 
-        <footer
-          style={{
-            borderTop: "1px solid #303039",
-            paddingTop: 25,
-            textAlign: "center",
-            color: "#777",
-            fontSize: 13,
-          }}
-        >
-          MANATEE519 © 2026
-          <br />
-          <a
-            href="/"
-            style={{ color: "#ff477a", lineHeight: 3 }}
-          >
-            RETURN TO LEADERBOARD
-          </a>
+        <footer>
+          <strong>MANATEE519</strong>
+          <p>© 2026 MANATEE519. All rights reserved.</p>
+          <a href="/">RETURN TO LEADERBOARD</a>
         </footer>
       </div>
 
-      {checkoutOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.85)",
-            zIndex: 100,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 15,
-          }}
-        >
-          <div
-            style={{
-              background: "#19191f",
-              border: "1px solid #454550",
-              borderRadius: 16,
-              padding: 24,
-              width: "100%",
-              maxWidth: 520,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <h2>YOUR PRE-ORDER</h2>
-              <button
-                onClick={() => setCheckoutOpen(false)}
-                style={{
-                  background: "transparent",
-                  border: 0,
-                  color: "white",
-                  fontSize: 28,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
+      {cartOpen && (
+        <div className="overlay">
+          <div className="cartPanel">
+            <div className="cartHeader">
+              <h2>YOUR CART ({itemCount})</h2>
+              <button onClick={() => setCartOpen(false)}>✕</button>
             </div>
 
             {cart.length === 0 ? (
-              <p style={{ color: "#aaa" }}>
-                Your cart is empty.
-              </p>
+              <div className="emptyCart">
+                <p>Your cart is empty.</p>
+                <button
+                  className="addButton"
+                  onClick={() => setCartOpen(false)}
+                >
+                  CONTINUE SHOPPING
+                </button>
+              </div>
             ) : (
               <>
                 {cart.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: "15px 0",
-                      borderBottom: "1px solid #333",
-                    }}
-                  >
-                    <strong>{item.name}</strong>
-                    <p style={{ color: "#aaa", fontSize: 13 }}>
-                      {item.color} / {item.size}
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span>
-                        {money(item.price * item.quantity)}
-                      </span>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 14,
-                        }}
-                      >
+                  <div className="cartItem" key={item.key}>
+                    <div className="cartThumb">
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        sizes="80px"
+                        style={{ objectFit: "contain" }}
+                      />
+                    </div>
+                    <div className="cartItemDetails">
+                      <strong>{item.name}</strong>
+                      <p>{item.color} / {item.size}</p>
+                      <span>{usd(item.price * item.quantity)}</span>
+                      <div className="quantity">
                         <button
                           onClick={() =>
-                            changeQuantity(item.id, -1)
+                            changeQuantity(item.key, -1)
                           }
                         >
                           −
                         </button>
-                        {item.quantity}
+                        <span>{item.quantity}</span>
                         <button
                           onClick={() =>
-                            changeQuantity(item.id, 1)
+                            changeQuantity(item.key, 1)
                           }
                         >
                           +
@@ -591,48 +376,45 @@ export default function MerchPage() {
                   </div>
                 ))}
 
-                <h2 style={{ textAlign: "right" }}>
-                  {money(subtotal)} USD
-                </h2>
+                <div className="total">
+                  <span>SUBTOTAL</span>
+                  <strong>{usd(subtotal)} USD</strong>
+                </div>
 
-                <p style={{ color: "#aaa", fontSize: 13 }}>
-                  Canadian shipping is free. International
-                  shipping will be quoted separately.
+                <p className="shippingNote">
+                  🇨🇦 Free Canadian shipping. International
+                  shipping quoted separately.
                 </p>
 
+                <h3 className="checkoutTitle">PRE-ORDER DETAILS</h3>
+
                 <input
+                  style={inputStyle}
                   placeholder="Your name"
-                  value={customerName}
-                  onChange={(e) =>
-                    setCustomerName(e.target.value)
-                  }
-                  style={{
-                    ...fieldStyle,
-                    marginBottom: 12,
+                  value={name}
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setCopied(false);
                   }}
                 />
 
                 <input
+                  style={inputStyle}
                   type="email"
-                  placeholder="Your email"
-                  value={customerEmail}
-                  onChange={(e) =>
-                    setCustomerEmail(e.target.value)
-                  }
-                  style={{
-                    ...fieldStyle,
-                    marginBottom: 12,
+                  placeholder="Your email address"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setCopied(false);
                   }}
                 />
 
                 <select
+                  style={inputStyle}
                   value={country}
-                  onChange={(e) =>
-                    setCountry(e.target.value)
-                  }
-                  style={{
-                    ...fieldStyle,
-                    marginBottom: 12,
+                  onChange={(event) => {
+                    setCountry(event.target.value);
+                    setCopied(false);
                   }}
                 >
                   <option>Canada</option>
@@ -641,53 +423,522 @@ export default function MerchPage() {
                 </select>
 
                 <button
-                  disabled={
-                    !customerName.trim() ||
-                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                      customerEmail
-                    )
-                  }
+                  className="addButton"
+                  disabled={!name.trim() || !validEmail}
                   onClick={copyOrder}
-                  style={{
-                    width: "100%",
-                    padding: 16,
-                    background: "#ef1252",
-                    color: "white",
-                    border: 0,
-                    borderRadius: 9,
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    opacity:
-                      !customerName.trim() ||
-                      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                        customerEmail
-                      )
-                        ? 0.5
-                        : 1,
-                  }}
                 >
                   {copied
                     ? "ORDER DETAILS COPIED!"
                     : "COPY PRE-ORDER REQUEST"}
                 </button>
 
-                <p
-                  style={{
-                    color: "#aaa",
-                    fontSize: 12,
-                    lineHeight: 1.7,
-                  }}
-                >
-                  This copies your order details so you can
-                  send them to MANATEE519. No payment is
-                  collected and no order is submitted
-                  automatically.
+                <p className="disclaimer">
+                  Copy your order details and send them to
+                  MANATEE519 to arrange your pre-order.
+                  This website does not currently collect
+                  payment or submit orders automatically.
                 </p>
               </>
             )}
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          background: #08080b;
+        }
+
+        .merch {
+          min-height: 100vh;
+          color: white;
+          font-family: Arial, Helvetica, sans-serif;
+          background:
+            radial-gradient(
+              ellipse at 50% 0%,
+              #391021 0%,
+              #101017 38%,
+              #070709 75%
+            );
+        }
+
+        .container {
+          max-width: 1250px;
+          margin: auto;
+          padding: 0 24px;
+        }
+
+        .nav {
+          height: 90px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #34303a;
+          gap: 15px;
+        }
+
+        .brand {
+          color: white;
+          text-decoration: none;
+          font-size: 23px;
+          font-weight: 1000;
+          letter-spacing: -1px;
+        }
+
+        .brand span {
+          color: #ff1456;
+        }
+
+        .navActions {
+          display: flex;
+          align-items: center;
+          gap: 25px;
+        }
+
+        .backLink {
+          color: #aaa;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: bold;
+        }
+
+        .cartButton,
+        .addButton {
+          border: 0;
+          color: white;
+          background: #f01250;
+          font-weight: 900;
+          cursor: pointer;
+          border-radius: 8px;
+          transition: 0.2s;
+        }
+
+        .cartButton {
+          padding: 13px 20px;
+        }
+
+        .addButton {
+          width: 100%;
+          padding: 16px;
+          margin-top: 22px;
+          font-size: 14px;
+        }
+
+        .cartButton:hover,
+        .addButton:hover {
+          background: #ff376b;
+        }
+
+        .addButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .hero {
+          text-align: center;
+          padding: 85px 10px 90px;
+        }
+
+        .eyebrow {
+          color: #ff5b87;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 5px;
+        }
+
+        .hero h1 {
+          font-size: clamp(46px, 9vw, 105px);
+          font-weight: 1000;
+          letter-spacing: -4px;
+          margin: 20px 0;
+          line-height: 1.05;
+        }
+
+        .hero h1 span {
+          color: #f01250;
+        }
+
+        .heroText {
+          color: #bbb;
+          line-height: 1.9;
+          font-size: 17px;
+        }
+
+        .preorderTag {
+          display: inline-block;
+          border: 1px solid #f01250;
+          color: #ff6994;
+          border-radius: 30px;
+          padding: 12px 25px;
+          font-size: 12px;
+          letter-spacing: 2px;
+          font-weight: 900;
+          margin-top: 25px;
+        }
+
+        .shipping {
+          color: #ddd;
+          font-weight: bold;
+          margin-top: 25px;
+          font-size: 14px;
+        }
+
+        .sectionTitle {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 25px;
+        }
+
+        .sectionTitle h2 {
+          font-size: 26px;
+          letter-spacing: 1px;
+        }
+
+        .sectionTitle p {
+          color: #999;
+          font-size: 13px;
+        }
+
+        .products {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 22px;
+        }
+
+        .productCard {
+          background: #15151b;
+          border: 1px solid #34303a;
+          border-radius: 16px;
+          overflow: hidden;
+          transition: 0.2s;
+        }
+
+        .productCard:hover {
+          border-color: #b82650;
+          transform: translateY(-3px);
+        }
+
+        .productImage {
+          position: relative;
+          height: 310px;
+          background: #fff;
+          overflow: hidden;
+        }
+
+        .dropLabel {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          z-index: 2;
+          background: #f01250;
+          padding: 8px 11px;
+          font-size: 10px;
+          font-weight: 900;
+          border-radius: 5px;
+          letter-spacing: 1px;
+        }
+
+        .productInfo {
+          padding: 23px;
+        }
+
+        .productInfo h3 {
+          font-size: 19px;
+          margin: 0 0 12px;
+        }
+
+        .description {
+          color: #aaa;
+          font-size: 13px;
+          line-height: 1.7;
+          min-height: 45px;
+        }
+
+        .price {
+          color: #ff346c;
+          font-size: 30px;
+          font-weight: 900;
+          margin: 20px 0;
+        }
+
+        .price small {
+          font-size: 12px;
+          color: #999;
+        }
+
+        .productInfo label {
+          display: block;
+          color: #bbb;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 1px;
+          margin: 20px 0 12px;
+        }
+
+        .colorButtons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 7px;
+        }
+
+        .colorChoice {
+          border: 1px solid #3b3b47;
+          background: #202029;
+          color: #ccc;
+          border-radius: 7px;
+          padding: 10px;
+          font-size: 11px;
+          cursor: pointer;
+        }
+
+        .colorChoice.active {
+          background: #f01250;
+          border-color: #f01250;
+          color: white;
+          font-weight: bold;
+        }
+
+        .information {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+          margin: 85px 0;
+        }
+
+        .information > div {
+          text-align: center;
+          background: #14141a;
+          border: 1px solid #303039;
+          border-radius: 12px;
+          padding: 30px 15px;
+        }
+
+        .information h3 {
+          font-size: 14px;
+          color: #fff;
+        }
+
+        .information p {
+          color: #aaa;
+          font-size: 13px;
+          line-height: 1.7;
+        }
+
+        footer {
+          text-align: center;
+          border-top: 1px solid #333;
+          padding: 40px 0;
+          color: #777;
+          font-size: 12px;
+        }
+
+        footer strong {
+          color: #fff;
+          font-size: 19px;
+        }
+
+        footer a {
+          display: block;
+          color: #ff477a;
+          margin-top: 18px;
+          text-decoration: none;
+        }
+
+        .overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          background: rgba(0, 0, 0, 0.86);
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .cartPanel {
+          width: 100%;
+          max-width: 490px;
+          height: 100vh;
+          overflow-y: auto;
+          background: #17171d;
+          border-left: 1px solid #383842;
+          padding: 25px;
+        }
+
+        .cartHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #383842;
+          padding-bottom: 15px;
+        }
+
+        .cartHeader h2 {
+          font-size: 20px;
+        }
+
+        .cartHeader button {
+          border: 0;
+          background: transparent;
+          color: white;
+          font-size: 25px;
+          cursor: pointer;
+        }
+
+        .cartItem {
+          display: flex;
+          gap: 15px;
+          padding: 22px 0;
+          border-bottom: 1px solid #34343d;
+        }
+
+        .cartThumb {
+          position: relative;
+          flex-shrink: 0;
+          width: 85px;
+          height: 85px;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .cartItemDetails {
+          flex: 1;
+        }
+
+        .cartItemDetails strong {
+          font-size: 13px;
+        }
+
+        .cartItemDetails p {
+          color: #aaa;
+          font-size: 12px;
+        }
+
+        .cartItemDetails span {
+          color: #ff477a;
+          font-weight: bold;
+        }
+
+        .quantity {
+          display: flex;
+          align-items: center;
+          gap: 13px;
+          margin-top: 12px;
+        }
+
+        .quantity button {
+          background: #30303b;
+          border: 0;
+          color: white;
+          width: 28px;
+          height: 28px;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+
+        .total {
+          display: flex;
+          justify-content: space-between;
+          padding: 25px 0;
+          font-size: 19px;
+        }
+
+        .total strong {
+          color: #ff477a;
+        }
+
+        .shippingNote {
+          color: #bbb;
+          font-size: 13px;
+          line-height: 1.7;
+        }
+
+        .checkoutTitle {
+          margin-top: 30px;
+          font-size: 16px;
+        }
+
+        .cartPanel input,
+        .cartPanel select {
+          margin: 8px 0;
+        }
+
+        .disclaimer {
+          color: #999;
+          font-size: 12px;
+          line-height: 1.8;
+          margin-top: 18px;
+        }
+
+        .emptyCart {
+          padding: 40px 0;
+          text-align: center;
+          color: #aaa;
+        }
+
+        @media (max-width: 950px) {
+          .products {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 700px) {
+          .container {
+            padding: 0 15px;
+          }
+
+          .nav {
+            height: 75px;
+          }
+
+          .brand {
+            font-size: 19px;
+          }
+
+          .navActions {
+            gap: 10px;
+          }
+
+          .backLink {
+            font-size: 10px;
+          }
+
+          .cartButton {
+            padding: 11px;
+            font-size: 11px;
+          }
+
+          .hero {
+            padding: 60px 0;
+          }
+
+          .hero h1 {
+            letter-spacing: -2px;
+          }
+
+          .products,
+          .information {
+            grid-template-columns: 1fr;
+          }
+
+          .productImage {
+            height: 300px;
+          }
+
+          .sectionTitle h2 {
+            font-size: 20px;
+          }
+
+          .information {
+            margin: 50px 0;
+          }
+        }
+      `}</style>
     </main>
   );
 }
