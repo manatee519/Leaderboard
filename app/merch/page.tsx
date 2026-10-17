@@ -165,15 +165,31 @@ export default function MerchPage() {
     "This is a pre-order request. Payment has not been collected.",
   ].join("\n");
 
-  async function copyOrder() {
-    try {
-      await navigator.clipboard.writeText(orderDetails);
-      setCopied(true);
-    } catch {
-      alert("Copy failed. Please try again.");
-    }
-  }
+ async function copyOrder() {
+  try {
+    const response = await fetch("/api/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ cart }),
+    });
 
+    const data = await response.json();
+
+    if (!response.ok || !data.url) {
+      throw new Error(data.error || "Checkout failed");
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Unable to start checkout."
+    );
+  }
+}
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
@@ -427,17 +443,13 @@ export default function MerchPage() {
                   disabled={!name.trim() || !validEmail}
                   onClick={copyOrder}
                 >
-                  {copied
-                    ? "ORDER DETAILS COPIED!"
-                    : "COPY PRE-ORDER REQUEST"}
+SECURE CHECKOUT
                 </button>
 
-                <p className="disclaimer">
-                  Copy your order details and send them to
-                  MANATEE519 to arrange your pre-order.
-                  This website does not currently collect
-                  payment or submit orders automatically.
-                </p>
+            <p className="disclaimer">
+  You will be redirected to Stripe for secure payment.
+</p>
+   
               </>
             )}
           </div>
