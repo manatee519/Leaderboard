@@ -90,10 +90,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ url: session.url });
-  } catch {
-    return NextResponse.json(
-      { error: "Unable to start checkout." },
-      { status: 400 }
-    );
+} catch (error) {
+  console.error("Stripe checkout error:", error);
+  return NextResponse.json(
+    { error: "Checkout failed. Check server logs." },
+    { status: 400 }
+  );
+}
   }
 }
